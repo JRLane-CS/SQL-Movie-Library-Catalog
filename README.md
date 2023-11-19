@@ -31,7 +31,7 @@ Python is the programming language used to develop this application. It is confi
 - [PySimpleGUI Documentation](https://www.pysimplegui.org/en/latest/)
 - [Python SQLite Tutorial](https://www.youtube.com/watch?v=pd-0G0MigUA)
 - [SQLite Databases with Python: Full Course](https://www.youtube.com/watch?v=byHcYRpMgI4)
-- [SQLite Documentation](https://www.sqlite.org/docs.html)
+- [SQLite Documentation](https://docs.python.org/3/library/sqlite3.html)
 
 # Future Work
 
