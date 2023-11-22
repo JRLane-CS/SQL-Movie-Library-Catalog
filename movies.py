@@ -79,19 +79,20 @@ def create_window():
     
     # set the layout for the create window
     create_layout = [
-        [pysg.Text("Add movie title:"), 
+        [pysg.Push(), pysg.Text("Add Movie"), pysg.Push()],
+        [pysg.Text("Title:"), 
         pysg.Input(key="title", expand_x=True)],
         [pysg.Text("Location:")],
         [pysg.Text("Bookcase number:"), 
-        pysg.Input(key="bookcase", expand_x=True)],
+        pysg.Input(key="bookcase", size=(1,1))],
         [pysg.Text("Shelf number:"), 
-        pysg.Input(key="shelf", expand_x=True)],
+        pysg.Input(key="shelf", size=(1,1))],
         [pysg.Text("Stack number:"), 
-        pysg.Input(key="stack", expand_x=True)],
+        pysg.Input(key="stack", size=(1,1))],
         [pysg.Text("Output:"), 
         pysg.Multiline
         (key="list", size=(0, 5), expand_x=True, expand_y=True, pad=11)],
-        [pysg.Button("Add Movie", key="add_movie"), 
+        [pysg.Button("Add Movie", key="add_movie"), pysg.Push(),
          pysg.Button("Exit Add Movie", key="exit")],
     ]
     
@@ -202,10 +203,14 @@ def read_window():
     
     # set the layout for the read window
     read_layout = [
-        [pysg.Text("Search:"), 
+        [pysg.Push(), pysg.Text("Search Movies"), pysg.Push()],
+        [pysg.Text("Title:"), 
         pysg.Input(key="title", enable_events=True, expand_x=True)],
-        [pysg.Text("Output:", key="output_text", size=(5, 20)), 
-        pysg.Multiline(key="list", expand_x=True, expand_y=True, pad=11)],
+        [pysg.Text("Matches:")],
+        [pysg.Text("Output:", key="output_text"), 
+        pysg.Multiline
+        (key="list", size=(15, 20), expand_x=True, expand_y=True, pad=11)],
+        [pysg.Push(), pysg.Button("Quit Search Movies", key="quit")],
         ]
     
     # start the read window object
@@ -220,7 +225,7 @@ def read_window():
         event, values = read_window.read()
 
         # if user clicks exit button or the red x in top right of window, end
-        if event in (None, "Exit"):
+        if event in (None, "quit"):
             break
         
         # read (list) movies in db based on search term
@@ -240,45 +245,242 @@ def read_window():
     
                     else:
                         read_window["list"].print(f"'{movie_data[1]}', {movie_data[2]}, {movie_data[3]}, {movie_data[4]}")
+    
     # close the read window and end function
     read_window.close()
 
 
-# TODO function to create the window to update a db entry (db update operation)
+# function to create the window to update a db entry (db update operation)
 def update_window():
     
+    # set default variables
+    key = 0
+    title = ""
+    bookcase = 0
+    shelf = 0
+    stack = 0
+
+    # set layout for update window
     update_layout = [
-
-    ]
+        [pysg.Push(), pysg.Text("Update Movie"), pysg.Push()],
+        [pysg.Text("Title:"), 
+        pysg.Input(key="title", enable_events=True, expand_x=True)],
+        [pysg.Text("Matches:")],
+        [pysg.Text("Output:"), 
+        pysg.Multiline(key="list", expand_x=True, expand_y=True, pad=11, size=(5, 6))],
+        [pysg.Push(), pysg.Text("Updated Information"), pysg.Push()],
+        [pysg.Text("Title:"), 
+        pysg.Input(key="update_title", expand_x=True)],
+        [pysg.Text("Location:")],
+        [pysg.Text("Bookcase number:"), 
+        pysg.Input(key="bookcase", size=(1,1))],
+        [pysg.Text("Shelf number:"), 
+        pysg.Input(key="shelf", size=(1,1))],
+        [pysg.Text("Stack number:"), 
+        pysg.Input(key="stack", size=(1,1))],
+        [pysg.Button("Update Movie", key="update"), pysg.Push(), 
+        pysg.Button("Quit Update Movie", key="quit")],
+        ]
     
-    # update movie by id
-    cur.execute("SELECT * FROM movies WHERE id = ?", (key,))
-    print(f"\n Before update:\n{cur.fetchall()}")
-    cur.execute("UPDATE movies SET title = ? WHERE id = ?", (title, key,))
-    connection.commit()
-    cur.execute("SELECT * FROM movies WHERE id = ?", (key,))
-    print(f"\n After update:\n{cur.fetchall()}")
+    # start the read window object
+    update_window = pysg.Window("SQL Movie Library Catalog", update_layout, 
+                  use_default_focus=False, resizable=True, finalize=True, 
+                  modal=True)
+    
+    # event loop to read the update window
+    while True:
+
+        # set default matches value
+        matches = 0
+        
+        # read update window for events and collect values
+        event, values = update_window.read()
+
+        # if user clicks exit button or the red x in top right of window, end
+        if event in (None, "quit"):
+            break
+        
+        # read (list) movies in db as search term is typed
+        elif event in "title":
+            
+            # get search value(s)
+            search = values["title"]
+
+            # clear the multiline element output
+            update_window["list"].Update("")
+
+            # loop through the db, display any partial matches to search value
+            for movie_data in cur.execute("SELECT * FROM movies"):
+                if search in movie_data[1]:
+                    
+                    # keep track of matches
+                    matches += 1
+
+                    # load variables with current match
+                    key = movie_data[0]
+                    title = movie_data[1]
+                    bookcase = movie_data[2]
+                    shelf = movie_data[3]
+                    stack = movie_data[4]
+                    
+                    # display matches to user
+                    if movie_data[4] == 0:
+                        update_window["list"].print(f"'{movie_data[1]}', {movie_data[2]}, {movie_data[3]}")
+    
+                    else:
+                        update_window["list"].print(f"'{movie_data[1]}', {movie_data[2]}, {movie_data[3]}, {movie_data[4]}")
+    
+            # if only one match, populate update fields
+            if matches == 1:
+
+                update_window["update_title"].Update(title)
+                update_window["bookcase"].Update(bookcase)
+                update_window["shelf"].Update(shelf)
+                update_window["stack"].Update(stack)
+
+        # when update movies button is clicked
+        elif event in "update":
+
+            # clear output field
+            update_window["list"].Update("")
+
+            # get current db data to compare against
+            cur.execute("SELECT * FROM movies WHERE id = ?", (key,))
+            movie_data = cur.fetchall()
+            old_title = movie_data[0][1]
+            old_bookcase = movie_data[0][2]
+            old_shelf = movie_data[0][3]
+            old_stack = movie_data[0][4]
+
+            # warn user if any field isn't populated
+            if values["update_title"] == "" or\
+               values["bookcase"] == "" or\
+               values["shelf"] == "" or\
+               values["stack"] == "":
+                update_window["list"].print("Verify all fields are populated and try again.")                
+
+            # stop update if no changes were made
+            elif values["update_title"] == old_title and\
+               int(values["bookcase"]) == old_bookcase and\
+               int(values["shelf"]) == old_shelf and\
+               int(values["stack"]) == old_stack:
+                update_window["list"].print("You made no changes.") 
+                
+            # otherwise, update the db
+            else:
+
+                # update movie fields by id
+                cur.execute("UPDATE movies SET title = ? WHERE id = ?", (title, key,))
+                cur.execute("UPDATE movies SET bookcase = ? WHERE id = ?", (int(values["bookcase"]), key,))
+                cur.execute("UPDATE movies SET shelf = ? WHERE id = ?", (int(values["shelf"]), key,))
+                cur.execute("UPDATE movies SET stack = ? WHERE id = ?", (int(values["stack"]), key,))
+                connection.commit()
+
+                # show updated message
+                cur.execute("SELECT * FROM movies WHERE id = ?", (key,))
+                movie_data = cur.fetchall()
+                update_window["list"].print(f"Updated information:")
+                update_window["list"].print(f"Title:    {movie_data[0][1]}")
+                update_window["list"].print(f"Bookcase: {movie_data[0][2]}")
+                update_window["list"].print(f"Shelf:    {movie_data[0][3]}")
+                update_window["list"].print(f"Stack:    {movie_data[0][4]}")
+
+    # close the read window and end function
+    update_window.close() 
 
 
-# TODO function to create the window to delete a db entry (db delete operation)
+# function to create the window to delete a db entry (db delete operation)
 def delete_window():
 
+    # set the delete window layout
     delete_layout = [
+        [pysg.Push(), pysg.Text("Delete Movie"), pysg.Push()],
+        [pysg.Text("Title:"), 
+        pysg.Input(key="title", enable_events=True, expand_x=True)],
+        [pysg.Text("Matches:")],
+        [pysg.Text("Output:"), 
+        pysg.Multiline(key="list", expand_x=True, expand_y=True, pad=11, size=(5, 20))],
+        [pysg.Button("Delete Movie", key="delete"), pysg.Push(), 
+        pysg.Button("Quit Delete Movie", key="quit")],
+        ]
 
-    ]
+    # start the delete window object
+    delete_window = pysg.Window("SQL Movie Library Catalog", delete_layout, 
+                  use_default_focus=False, resizable=True, finalize=True, 
+                  modal=True)
 
-    # have user select the movie to delete, get key from db, delete by key
-    key = 0
-    
-    # delete movie by id
-    cur.execute("DELETE FROM movies WHERE id = ?", (key,))
-    connection.commit()
-    cur.execute("SELECT * FROM movies WHERE id = ?", (key,))
-    print(f"\n After deleting id {key}:\n{cur.fetchall()}\n")
+    # event loop to read the delete window
+    while True:
+
+        # read delete window for events and collect values
+        event, values = delete_window.read()
+
+        # if user clicks exit button or the red x in top right of window, end
+        if event in (None, "quit"):
+            break
+        
+        # read (list) movies in db based on search term
+        elif event in "title":
+            
+            # get delete title 
+            search = values["title"]
+
+            # clear the multiline element output
+            delete_window["list"].Update("")
+
+            # loop through the db, display any partial matches to search value
+            for movie_data in cur.execute("SELECT * FROM movies"):
+                if search in movie_data[1]:
+                    delete_window["list"].print(movie_data[1])
+
+        elif event in "delete":
+
+            # track primary key and title
+            key = 0
+            title = ""
+            
+            # track number of matches
+            matches = 0
+
+            # clear the multiline element output
+            delete_window["list"].Update("")
+            
+            # get search value(s)
+            search = values["title"]
+
+            # loop through db and count matches and last key
+            for movie_data in cur.execute("SELECT * FROM movies"):
+                if search in movie_data[1]:
+                    matches += 1
+                    key = movie_data[0]
+                    title = movie_data[1]                    
+
+            # only 1 match allowed
+            if matches != 1:
+
+                # message user of incorrect selection
+                delete_window["list"].print("Incorrect selection.")
+
+                # show user specific problem            
+                if matches == 0:
+                    delete_window["list"].print("No movie matches to delete.")
+
+                else:
+                    delete_window["list"].print("Select one movie to delete.")
+
+            # delete movie by id (primary key)
+            else:
+                cur.execute("DELETE FROM movies WHERE id = ?", (key,))
+                connection.commit()
+                delete_window["list"].print(f"{title} deleted.")
+            
+    # close the read window and end function
+    delete_window.close()
+
 
 # set initial gui layout
 initial_layout = [
-    [pysg.Push(), pysg.Text("Select Database Operation (CRUD):"), pysg.Push()], 
+    [pysg.Push(), pysg.Text("Select Library Operation"), pysg.Push()], 
     [pysg.Button("Add Movie", key="create",enable_events=True), 
      pysg.Button("Search Movies", key="read", enable_events=True), 
      pysg.Button("Update Movie", key="update", enable_events=True), 
@@ -307,10 +509,13 @@ while True:
         read_window()
 
     elif event in "update":
-        print("Perform update function")
+        update_window()
 
     elif event in "delete":
-        print("Perform delete function")
+        delete_window()
 
 # close window and end program
 window.close()
+
+# close connection to db
+connection.close()
