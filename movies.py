@@ -79,34 +79,122 @@ def create_window():
     
     # set the layout for the create window
     create_layout = [
-
+        [pysg.Text("Add movie title:"), 
+        pysg.Input(key="title", expand_x=True)],
+        [pysg.Text("Location:")],
+        [pysg.Text("Bookcase number:"), 
+        pysg.Input(key="bookcase", expand_x=True)],
+        [pysg.Text("Shelf number:"), 
+        pysg.Input(key="shelf", expand_x=True)],
+        [pysg.Text("Stack number:"), 
+        pysg.Input(key="stack", expand_x=True)],
+        [pysg.Text("Output:"), 
+        pysg.Multiline
+        (key="list", size=(0, 5), expand_x=True, expand_y=True, pad=11)],
+        [pysg.Button("Add Movie", key="add_movie"), 
+         pysg.Button("Exit Add Movie", key="exit")],
     ]
     
     # start create window object
     create_window = pysg.Window("SQL Movie Library Catalog", create_layout, 
                 use_default_focus=False, resizable=True, finalize=True, 
                 modal=True)
-    
-    # get next available primary key to insert into db
-    key = 1
-    for value in cur.execute("SELECT * FROM movies"):
-        if value[0] == (key):
-            key += 1
-        else:
+
+    # event loop for create window
+    while True:
+
+        # read create window for events and collect values
+        event, values = create_window.read()
+
+        # if user clicks exit button or the red x in top right of window, end
+        if event in (None, "exit"):
+            break
+        
+        # read (list) movies in db based on search term
+        elif event in "add_movie":
+            
+            # clear any former comments from output
+            create_window["list"].Update("")
+
+            # load variables with input data
+            title = values["title"]
+            bookcase = values["bookcase"]
+            shelf = values["shelf"]
+            stack = values["stack"]
+            validity = True
+
+            # error check the movie title for being empty
+            if title == "":
+                create_window["list"].print("Title is required!")
+                validity = False                
+
+            # verify bookcase is an integer
+            if not bookcase.isdecimal():
+                create_window["list"].print("Bookcase must be an integer!")
+                validity = False
+
+            else:
+                bookcase = int(bookcase)
+
+            # either shelf or stack must be populated, not both
+            if (shelf == "" and stack == "") or \
+               (shelf.isdecimal() == False and stack.isdecimal() == False):
+                create_window["list"].print("Valid shelf or stack is required!")
+                validity = False
+
+            # set shelf or stack integers
+            if shelf.isdecimal() and stack.isdecimal():
+                shelf = int(shelf)
+                stack = int(stack)
+                
+                # default to shelf value if both > 0
+                if shelf > 0 and stack > 0:
+                    stack = 0
+
+            # if shelf is a decimal, then make stack 0
+            elif shelf.isdecimal():
+                shelf = int(shelf)
+                stack = 0
+
+            # otherwise make stack the integer and shelf 0
+            elif stack.isdecimal():
+                stack = int(stack)
+                shelf = 0
+
+            # check to make sure that stack and shelf are not both zero
+            if stack == 0 and shelf == 0:
+                create_window["list"].print("Invalid location.")
+                validity = False
+
+            # if there were errors, loop again
+            if not validity:
+                continue
+                
+            # default to shelf value if both > 0
+            if shelf > 0 and stack > 0:
+                stack = 0
+                
+            # get next available primary key to insert into db
+            key = 1
+            for value in cur.execute("SELECT * FROM movies"):
+                if value[0] == (key):
+                    key += 1
+                else:
+                    break
+
+            # load movie list with db elements
+            movie_list = [key, title, bookcase, shelf, stack,]
+
+            # insert movie into db
+            cur.execute("INSERT OR IGNORE INTO movies VALUES \
+                        (?, ?, ?, ?, ?)", movie_list)
+            connection.commit() 
+
+            # break out of loop and close window
             break
 
-    # set title, bookcase, shelf, and stack values
-    title = ""
-    bookcase = 0
-    shelf = 0
-    stack = 0
-
-    # load movie list with db elements
-    movie_list = [key, title, bookcase, shelf, stack]
-
-    # if movie is already in db, ignore error, otherwise insert movie into db
-    cur.execute("INSERT OR IGNORE INTO movies VALUES (?, ?, ?, ?, ?)", movie_list)
-    connection.commit()
+    # close the read window and end function
+    create_window.close()
     
 
 # function to create the window to search the db (db read operation)
@@ -125,10 +213,10 @@ def read_window():
                   use_default_focus=False, resizable=True, finalize=True, 
                   modal=True)
     
-    # event loop for read window
+    # event loop to read the read window
     while True:
 
-        # read window for events and collect values
+        # read the read window for events and collect values
         event, values = read_window.read()
 
         # if user clicks exit button or the red x in top right of window, end
@@ -147,13 +235,16 @@ def read_window():
             # loop through the db, display any partial matches to search value
             for movie_data in cur.execute("SELECT * FROM movies"):
                 if search in movie_data[1]:
-                    read_window["list"].print(movie_data[1])
+                    if movie_data[4] == 0:
+                        read_window["list"].print(f"'{movie_data[1]}', {movie_data[2]}, {movie_data[3]}")
     
+                    else:
+                        read_window["list"].print(f"'{movie_data[1]}', {movie_data[2]}, {movie_data[3]}, {movie_data[4]}")
     # close the read window and end function
     read_window.close()
 
 
-# function to create the window to update a db entry (db update operation)
+# TODO function to create the window to update a db entry (db update operation)
 def update_window():
     
     update_layout = [
@@ -169,7 +260,7 @@ def update_window():
     print(f"\n After update:\n{cur.fetchall()}")
 
 
-# function to create the window to delete a db entry (db delete operation)
+# TODO function to create the window to delete a db entry (db delete operation)
 def delete_window():
 
     delete_layout = [
@@ -187,12 +278,12 @@ def delete_window():
 
 # set initial gui layout
 initial_layout = [
-    [pysg.Text("Select Database Operation (CRUD):")], 
-    [pysg.Radio("Add Movie", "operation", key="create",enable_events=True), 
-     pysg.Radio("Search Movies", "operation", key="read", enable_events=True), 
-     pysg.Radio("Update Movie", "operation", key="update", enable_events=True), 
-     pysg.Radio("Delete Movie", "operation", key="delete", enable_events=True)],
-    [pysg.Button("Exit", key="exit")],
+    [pysg.Push(), pysg.Text("Select Database Operation (CRUD):"), pysg.Push()], 
+    [pysg.Button("Add Movie", key="create",enable_events=True), 
+     pysg.Button("Search Movies", key="read", enable_events=True), 
+     pysg.Button("Update Movie", key="update", enable_events=True), 
+     pysg.Button("Delete Movie", key="delete", enable_events=True)],
+    [pysg.Push(), pysg.Button("Quit", key="quit"), pysg.Push()],
     ]
 
 # create initial window object to select CRUD operation on db
@@ -206,11 +297,11 @@ while True:
     event, values = window.read()
 
     # if user clicks exit or the exit button in top right of window, end loop
-    if event in (None, "exit"):
+    if event in (None, "quit"):
         break
     
     if event in "create":
-        print("Perform create function.")
+        create_window()
 
     elif event in "read":
         read_window()
