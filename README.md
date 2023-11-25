@@ -40,8 +40,7 @@ Microsoft's Visual Studio Code was the IDE on which this program was coded.
 Python is the programming language used to develop this application. It is configured with the csv, PySimpleGUI, and SQLite3 modules.
 
 # Useful Websites
-
-{Make a list of websites that you found helpful in this project}
+Here's a sample list of the websites which helped me complete this project:
 
 - [PySimpleGUI Tutorial](https://www.youtube.com/watch?v=LzCfNanQ_9c)
 - [PySimpleGUI Tutorials](https://www.youtube.com/playlist?list=PL1A5nGiCuucueLRBA0VKHIjYTYipHqzcZ)
