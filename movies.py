@@ -1,3 +1,4 @@
+##### IMPORT MODULES #####
 # import gui library
 import PySimpleGUI as pysg
 
@@ -7,10 +8,11 @@ import sqlite3
 # import csv library
 import csv
 
-# read movie csv file into list
-# create an empty list.
+##### SET DEFAULTS FOR MOVIE LISTS #####
 movie_list = []
+extended_movie_data = []
 
+##### READ MOVIES CSV INTO MOVIE_LIST LIST #####
 # prepare for error and read csv file into movie_list
 try:
 
@@ -45,16 +47,52 @@ except Exception as e:
     print(f"Error reading movies.csv\n{e}\n")
     exit()
 
+##### READ MOVIES 2 CSV INTO SECOND_MOVIE_DATA LIST #####
+# prepare for error and read csv file into movie_list
+try:
+
+    # open the CSV file for reading.
+    with open("../movies2.csv", "rt") as csv_file:
+
+        # use the csv library to create a reader
+        # object that will read from the opened file.
+        reader = csv.reader(csv_file)
+
+        # Process each row in the CSV file.
+        for row in reader:
+
+            # change bookcase and shelf to int
+            row[1] = int(row[1])
+
+            # add row to list
+            extended_movie_data.append(row)
+
+# handle any errors, print out the error message, end program
+except Exception as e:
+    print(f"Error reading movies2.csv\n{e}\n")
+    exit()
+
+##### SETUP MOVIES DATABASE MOVIES AND EXTENDED TABLES #####
 # create the connection to and set up the database if it doesn't exist
 connection = sqlite3.connect("movies.db")
 
 # create the cursor 
 cur = connection.cursor()
 
-# if movies.db tables do not exist, create them
+# if extended table does not exist, create it
+cur.execute("""
+            CREATE TABLE IF NOT EXISTS extended 
+            (title text PRIMARY KEY, year int, imdbId text)
+            """)
+
+# if movies are not in the db, insert them
+cur.executemany("INSERT OR IGNORE INTO extended VALUES (?, ?, ?)", extended_movie_data)
+connection.commit()
+
+# if movies table does not exist, create it
 cur.execute("""
             CREATE TABLE IF NOT EXISTS movies 
-            (id int PRIMARY KEY, title text, bookcase int, shelf int, stack int)
+            (id int, titles text, bookcase int, shelf int, stack int, FOREIGN KEY(titles) REFERENCES extended(title), PRIMARY KEY(id) )
             """)
 
 # loop through movies list and format according to db layout
@@ -70,10 +108,12 @@ for i, movie_row in enumerate(movie_list):
 cur.executemany("INSERT OR IGNORE INTO movies VALUES (?, ?, ?, ?, ?)", movie_list)
 connection.commit()
 
+##### SETUP PYSIMPLEGUI COLOR THEME #####
 # set gui color scheme
 pysg.theme("darkbrown7")
 
 
+##### FUNCTIONS #####
 # function to create the window to add a movie (db create operation)
 def create_window():
     
@@ -478,44 +518,109 @@ def delete_window():
     delete_window.close()
 
 
-# set initial gui layout
-initial_layout = [
-    [pysg.Push(), pysg.Text("Select Library Operation"), pysg.Push()], 
-    [pysg.Button("Add Movie", key="create",enable_events=True), 
-     pysg.Button("Search Movies", key="read", enable_events=True), 
-     pysg.Button("Update Movie", key="update", enable_events=True), 
-     pysg.Button("Delete Movie", key="delete", enable_events=True)],
-    [pysg.Push(), pysg.Button("Quit", key="quit"), pysg.Push()],
-    ]
-
-# create initial window object to select CRUD operation on db
-window = pysg.Window("SQL Movie Library Catalog", initial_layout, 
-                     use_default_focus=False, resizable=True, finalize=True)
-
-# set main event loop
-while True: 
-
-    # read window for events and collect values
-    event, values = window.read()
-
-    # if user clicks exit or the exit button in top right of window, end loop
-    if event in (None, "quit"):
-        break
+# function to create the window to search the joined databases
+def joined_window():
     
-    if event in "create":
-        create_window()
+    # set the layout for the read window
+    joined_layout = [
+        [pysg.Push(), pysg.Text("Search Movies and Extended with Join"), pysg.Push()],
+        [pysg.Text("Title:"), 
+        pysg.Input(key="title", enable_events=True, expand_x=True)],
+        [pysg.Text("Matches:")],
+        [pysg.Text("Output:", key="output_text"), 
+        pysg.Multiline
+        (key="list", size=(15, 20), expand_x=True, expand_y=True, pad=11)],
+        [pysg.Push(), pysg.Button("Quit Search Movies", key="quit")],
+        ]
+    
+    # start the read window object
+    joined_window = pysg.Window("SQL Movie Library Catalog", joined_layout, 
+                  use_default_focus=False, resizable=True, finalize=True, 
+                  modal=True)
+    
+    # event loop to read the read window
+    while True:
 
-    elif event in "read":
-        read_window()
+        # read the read window for events and collect values
+        event, values = joined_window.read()
 
-    elif event in "update":
-        update_window()
+        # if user clicks exit button or the red x in top right of window, end
+        if event in (None, "quit"):
+            break
+        
+        # read (list) movies in db based on search term
+        elif event in "title":
+            
+            # get search value(s)
+            search = values["title"]
 
-    elif event in "delete":
-        delete_window()
+            # clear the multiline element output
+            joined_window["list"].Update("")
 
-# close window and end program
-window.close()
+            # inner join movies and extended tables loop through the db, 
+            # display any partial matches to search value
+            cur.execute(
+              "SELECT * FROM movies INNER JOIN extended ON movies.titles = extended.title")
+            joined = cur.fetchall()
+            for movie_data in joined:
+                if search.lower() in movie_data[1].lower():
+                    joined_window["list"].print(f"{movie_data[1]}, {movie_data[2]}, {movie_data[3]}, {movie_data[4]}, {movie_data[6]}, {movie_data[7]}")
+    
+    # close the read window and end function
+    joined_window.close()
+    
 
-# close connection to db
-connection.close()
+# main function
+def main():
+
+    # set initial gui layout
+    initial_layout = [
+        [pysg.Push(), pysg.Text("Select Library Operation"), pysg.Push()], 
+        [pysg.Button("Add Movie", key="create",enable_events=True), 
+        pysg.Button("Search Movies", key="read", enable_events=True), 
+        pysg.Button("Update Movie", key="update", enable_events=True), 
+        pysg.Button("Delete Movie", key="delete", enable_events=True),
+        pysg.Button("Search Joined Databases", key="joined", enable_events=True)],
+        [pysg.Text(" ")],
+        [pysg.Push(), pysg.Button("Quit", key="quit"), pysg.Push()],
+        ]
+
+    # create initial window object to select CRUD operation on db
+    window = pysg.Window("SQL Movie Library Catalog", initial_layout, 
+                        use_default_focus=False, resizable=True, finalize=True)
+
+    # set main event loop
+    while True: 
+
+        # read window for events and collect values
+        event, values = window.read()
+
+        # if user clicks exit or the exit button in top right of window, end loop
+        if event in (None, "quit"):
+            break
+        
+        if event in "create":
+            create_window()
+
+        elif event in "read":
+            read_window()
+
+        elif event in "update":
+            update_window()
+
+        elif event in "delete":
+            delete_window()
+
+        elif event in "joined":
+            joined_window()
+
+    # close window and end program
+    window.close()
+
+    # close connections to db
+    connection.close()
+
+
+# if application is run directly, call main function
+if __name__ == "__main__":
+    main()
