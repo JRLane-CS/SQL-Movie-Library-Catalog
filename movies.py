@@ -47,8 +47,8 @@ except Exception as e:
     print(f"Error reading movies.csv\n{e}\n")
     exit()
 
-##### READ MOVIES 2 CSV INTO SECOND_MOVIE_DATA LIST #####
-# prepare for error and read csv file into movie_list
+##### READ MOVIES2 CSV INTO EXTENDED_MOVIE_DATA LIST #####
+# prepare for error and read csv file into extended_movie_data
 try:
 
     # open the CSV file for reading.
@@ -61,7 +61,7 @@ try:
         # Process each row in the CSV file.
         for row in reader:
 
-            # change bookcase and shelf to int
+            # change year to int
             row[1] = int(row[1])
 
             # add row to list
@@ -72,7 +72,7 @@ except Exception as e:
     print(f"Error reading movies2.csv\n{e}\n")
     exit()
 
-##### SETUP MOVIES DATABASE MOVIES AND EXTENDED TABLES #####
+##### SETUP MOVIES DATABASE WITH MOVIES AND EXTENDED TABLES #####
 # create the connection to and set up the database if it doesn't exist
 connection = sqlite3.connect("movies.db")
 
@@ -80,19 +80,21 @@ connection = sqlite3.connect("movies.db")
 cur = connection.cursor()
 
 # if extended table does not exist, create it
-cur.execute("""
+cur.executescript("""
             CREATE TABLE IF NOT EXISTS extended 
-            (title text PRIMARY KEY, year int, imdbId text)
+            (title text, year int, imdbId text, PRIMARY KEY(title))
             """)
 
-# if movies are not in the db, insert them
+# if extended movie details are not in the db, insert them
 cur.executemany("INSERT OR IGNORE INTO extended VALUES (?, ?, ?)", extended_movie_data)
 connection.commit()
 
 # if movies table does not exist, create it
 cur.execute("""
             CREATE TABLE IF NOT EXISTS movies 
-            (id int, titles text, bookcase int, shelf int, stack int, FOREIGN KEY(titles) REFERENCES extended(title), PRIMARY KEY(id) )
+            (id int, titles text, bookcase int, shelf int, 
+            stack int, FOREIGN KEY(titles) REFERENCES extended(title), 
+            PRIMARY KEY(id))
             """)
 
 # loop through movies list and format according to db layout
@@ -272,14 +274,14 @@ def read_window():
         elif event in "title":
             
             # get search value(s)
-            search = values["title"]
+            search = values["title"].lower()
 
             # clear the multiline element output
             read_window["list"].Update("")
 
             # loop through the db, display any partial matches to search value
             for movie_data in cur.execute("SELECT * FROM movies"):
-                if search in movie_data[1]:
+                if search in movie_data[1].lower():
                     if movie_data[4] == 0:
                         read_window["list"].print(f"'{movie_data[1]}', {movie_data[2]}, {movie_data[3]}")
     
@@ -344,14 +346,14 @@ def update_window():
         elif event in "title":
             
             # get search value(s)
-            search = values["title"]
+            search = values["title"].lower()
 
             # clear the multiline element output
             update_window["list"].Update("")
 
             # loop through the db, display any partial matches to search value
             for movie_data in cur.execute("SELECT * FROM movies"):
-                if search in movie_data[1]:
+                if search in movie_data[1].lower():
                     
                     # keep track of matches
                     matches += 1
@@ -410,7 +412,7 @@ def update_window():
             else:
 
                 # update movie fields by id
-                cur.execute("UPDATE movies SET title = ? WHERE id = ?", (title, key,))
+                cur.execute("UPDATE movies SET titles = ? WHERE id = ?", (title, key,))
                 cur.execute("UPDATE movies SET bookcase = ? WHERE id = ?", (int(values["bookcase"]), key,))
                 cur.execute("UPDATE movies SET shelf = ? WHERE id = ?", (int(values["shelf"]), key,))
                 cur.execute("UPDATE movies SET stack = ? WHERE id = ?", (int(values["stack"]), key,))
@@ -463,14 +465,14 @@ def delete_window():
         elif event in "title":
             
             # get delete title 
-            search = values["title"]
+            search = values["title"].lower()
 
             # clear the multiline element output
             delete_window["list"].Update("")
 
             # loop through the db, display any partial matches to search value
             for movie_data in cur.execute("SELECT * FROM movies"):
-                if search in movie_data[1]:
+                if search in movie_data[1].lower():
                     delete_window["list"].print(movie_data[1])
 
         elif event in "delete":
@@ -506,7 +508,7 @@ def delete_window():
                     delete_window["list"].print("No movie matches to delete.")
 
                 else:
-                    delete_window["list"].print("Select one movie to delete.")
+                    delete_window["list"].print("Type the name of one movie to delete.")
 
             # delete movie by id (primary key)
             else:
@@ -599,6 +601,7 @@ def main():
         if event in (None, "quit"):
             break
         
+        # otherwise, call the appropriate function
         if event in "create":
             create_window()
 

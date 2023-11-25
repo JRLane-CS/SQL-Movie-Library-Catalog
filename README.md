@@ -19,12 +19,19 @@ This is where the idea for the SQL Movie Library Catalog comes in: The moment a 
 
 The relational database used in this application is the SQLite3 module which is built into Python.
 
-The movies.db table is arranged with five headers:
+The movies.db is set up with two tables. The movies table is arranged with five columns:
 - the id (Primary key)
-- the movie title
+- the movie title (FOREIGN KEY)
 - the bookcase where the disc is stored
 - the shelf where the disc is stored
 - the stack if the disc is on top of the bookcase
+
+The extended table is arranged with three columns:
+- the movie title (PRIMARY KEY)
+- the year the movie came out
+- the imdb id of the title
+
+In the Search Joined Tables feature, the type of join is an INNER JOIN between the two tables.
 
 # Development Environment
 
