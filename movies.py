@@ -234,7 +234,7 @@ def create_window():
             connection.commit() 
 
             # break out of loop and close window
-            break
+            create_window["list"].print(f"{movie_list[1]} added at {movie_list[2]}, {movie_list[3]}, {movie_list[4]}.")
 
     # close the read window and end function
     create_window.close()
