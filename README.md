@@ -8,12 +8,12 @@ The SQL Movie Library Catalog allows for the addition of new titles, searching o
 ## Purpose
 I have a growing collection of DVD and BluRay discs. I tried to keep track of them using a spreadsheet, but it is so time consuming to update the data, organize it, and then print out new catalogs. Over time, it got to the point that the task was so onerous that I simply stopped doing it. 
 
-This is where the idea for the SQL Movie Library Catalog comes in: The moment a movie or show is added into the database, it is available for search. No longer would I have to print out the catalogs! Instead, all that is necessary is to type enough of the title into the search input and the database is accessed to locate where the movie or show is located (along with any others that match the search term in some way). Not only this, but I no longer have to worry about whether the title starts with a 'The', 'A', 'An', or any other word. The program will almost instantaneously locate the title as I type.
+This is where the idea for the SQL Movie Library Catalog comes in: The moment a movie or show is added into the database, it is available for search. No longer would I have to print out the catalogs! Instead, all that is necessary is to type enough of the title into the search input and the database is accessed to locate where the movie, documentary, instructional video, or television show is located (along with any others that match the search term in some way). Not only this, but I no longer have to worry about whether the title starts with a 'The', 'A', 'An', or any other word. The program will almost instantaneously locate the title as I type a partial match.
 
 ## Video Demo
-{Provide a link to your YouTube demonstration. It should be a 4-5 minute demo of the software running, a walkthrough of the code, and a view of how created the Relational Database.}
+Here's a little demo I created with a quick code walkthrough.
 
-[Software Demo Video](http://youtube.link.goes.here)
+[SQL Movie Library Catalog Demo](https://youtu.be/kRinV_kvI04)
 
 # Relational Database
 
@@ -21,7 +21,7 @@ The relational database used in this application is the SQLite3 module which is 
 
 The movies.db is set up with two tables. The movies table is arranged with five columns:
 - the id (Primary key)
-- the movie title (FOREIGN KEY)
+- the movie titles (FOREIGN KEY)
 - the bookcase where the disc is stored
 - the shelf where the disc is stored
 - the stack if the disc is on top of the bookcase
@@ -37,7 +37,7 @@ In the Search Joined Tables feature, the type of join is an INNER JOIN between t
 
 Microsoft's Visual Studio Code was the IDE on which this program was coded.
 
-Python is the programming language used to develop this application. It is configured with the PySimpleGUI and SQLite modules.
+Python is the programming language used to develop this application. It is configured with the csv, PySimpleGUI, and SQLite3 modules.
 
 # Useful Websites
 
@@ -58,6 +58,6 @@ Although the SQL Movie Library Catalog is functional, it is also limited in what
 - adapt to use a code reader, to automate the API access and storage of information
 - create a separate table to hold the media type of a given movie
 - create a separate table to hold the actor/actress names 
-- create a separate table to hold the movie ratings
+- create a separate table to hold the movie ratings and play times
 - create a separate table to hold the movie categories
-- modify search operation to search on title, actor/actress, movie rating, and movie categories
+- modify search operation to search on title, actor/actress, movie rating, play time, and movie categories

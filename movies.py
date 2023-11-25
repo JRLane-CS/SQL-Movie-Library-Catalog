@@ -523,7 +523,7 @@ def delete_window():
 # function to create the window to search the joined databases
 def joined_window():
     
-    # set the layout for the read window
+    # set the layout for the joined window
     joined_layout = [
         [pysg.Push(), pysg.Text("Search Movies and Extended with Join"), pysg.Push()],
         [pysg.Text("Title:"), 
@@ -535,26 +535,26 @@ def joined_window():
         [pysg.Push(), pysg.Button("Quit Search Movies", key="quit")],
         ]
     
-    # start the read window object
+    # start the joined window object
     joined_window = pysg.Window("SQL Movie Library Catalog", joined_layout, 
                   use_default_focus=False, resizable=True, finalize=True, 
                   modal=True)
     
-    # event loop to read the read window
+    # event loop to read the joined window
     while True:
 
-        # read the read window for events and collect values
+        # read the joined window for events and collect values
         event, values = joined_window.read()
 
         # if user clicks exit button or the red x in top right of window, end
         if event in (None, "quit"):
             break
         
-        # read (list) movies in db based on search term
+        # when user types into the title input, do this
         elif event in "title":
             
             # get search value(s)
-            search = values["title"]
+            search = values["title"].lower()
 
             # clear the multiline element output
             joined_window["list"].Update("")
@@ -565,7 +565,7 @@ def joined_window():
               "SELECT * FROM movies INNER JOIN extended ON movies.titles = extended.title")
             joined = cur.fetchall()
             for movie_data in joined:
-                if search.lower() in movie_data[1].lower():
+                if search in movie_data[1].lower():
                     joined_window["list"].print(f"{movie_data[1]}, {movie_data[2]}, {movie_data[3]}, {movie_data[4]}, {movie_data[6]}, {movie_data[7]}")
     
     # close the read window and end function
